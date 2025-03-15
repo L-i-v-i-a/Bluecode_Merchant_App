@@ -25,6 +25,7 @@ users_collection = db["users"]
 merchants_collection = db["merchants"]
 payments_collection = db["payments"]
 authorizations_collection = db["authorization"]
+bluescan_apps_collection = db["bluescan_apps"]
 
 # Bluecode DMS API Base URL
 DMS_BASE_URL = "https://merchant-api.acq.int.bluecode.ng/v4/dms"
@@ -68,6 +69,16 @@ def register_authorization():
     bluecode_access_id, bluecode_secret_key = get_merchant_credentials(merchant_ext_id)
     if not bluecode_access_id or not bluecode_secret_key:
         return jsonify({"error": "Merchant credentials not found"}), 401
+    
+   # Fetch the BlueScan App ID for the correct merchant
+    bluescan_app = bluescan_apps_collection.find_one({
+    "merchant_id": merchant_ext_id  # Ensure we get the right merchant
+})
+
+    if not bluescan_app or "bluescan_app_id" not in bluescan_app:
+        return jsonify({"error": "BlueScan App not found for this merchant"}), 404  # ✅ Fixed Indentation
+
+    bluescan_app_id = bluescan_app["bluescan_app_id"]
 
     # Build Authorization Request Payload
     auth_payload = {
@@ -83,7 +94,8 @@ def register_authorization():
         "merchant_callback_url": "http://localhost:4000/dms/bluecode-webhook",
         "return_url_success": "http://localhost:3000/payment-success",
         "return_url_failure": "http://localhost:3000/payment-failed",
-        "return_url_cancel": "http://localhost:3000/cart"
+        "return_url_cancel": "http://localhost:3000/cart",
+        "bluescan_app_id": bluescan_app_id 
     }
 
     logging.info(f"📤 Authorization Payload: {auth_payload}")
@@ -617,125 +629,3 @@ def bluecode_webhook():
 
     return jsonify({"message": "Webhook received", "status": status}), 200
 
-@dms_bp.route("/webhook/payment-status", methods=["POST"])
-def payment_status_webhook():
-    """ Handle various payment status updates (authorization, capture, release, refund) """
-    data = request.json
-    logging.info(f"📩 Received Webhook: {data}")
-
-    # Extract the relevant information
-    acquirer_authorization_id = data.get("acquirer_authorization_id")
-    status = data.get("status")  # Can be 'COMPLETED', 'FAILED', etc.
-    transaction_type = data.get("transaction_type")  # 'authorization', 'capture', 'release', 'refund'
-
-    # Update the appropriate record in MongoDB
-    if transaction_type == "authorization":
-        # Handle authorization state update
-        authorization_record = authorizations_collection.update_one(
-            {"authorization.acquirer_authorization_id": acquirer_authorization_id},
-            {"$set": {"authorization_status.result": status}}
-        )
-    elif transaction_type == "capture":
-        # Handle capture state update
-        capture_record = authorizations_collection.update_one(
-            {"capture_details.capture.acquirer_authorization_id": acquirer_authorization_id},
-            {"$set": {"capture_status.result": status}}
-        )
-    elif transaction_type == "release":
-        # Handle release state update
-        release_record = authorizations_collection.update_one(
-            {"release_details.release.acquirer_authorization_id": acquirer_authorization_id},
-            {"$set": {"release_status.result": status}}
-        )
-    elif transaction_type == "refund":
-        # Handle refund state update
-        refund_record = authorizations_collection.update_one(
-            {"refund_details.refund.acquirer_authorization_id": acquirer_authorization_id},
-            {"$set": {"refund_status.result": status}}
-        )
-    else:
-        return jsonify({"error": "Unknown transaction type"}), 400
-
-    # Respond to acknowledge the receipt of the webhook
-    return jsonify({"result": "OK"}), 200
-
-@dms_bp.route("/merchant/transactions", methods=["GET"])
-@jwt_required()
-def get_merchant_transactions():
-    """ Fetch all transactions for a logged-in merchant """
-    user_id = get_jwt_identity()
-    merchant = merchants_collection.find_one({"user_id": str(user_id)})
-
-    if not merchant:
-        return jsonify({"error": "Merchant not found"}), 404
-
-    merchant_ext_id = merchant["ext_id"]
-
-    # Fetch transactions linked to this merchant
-    transactions = list(payments_collection.find({"merchant_ext_id": merchant_ext_id}, {"_id": 0}))
-
-    return jsonify({"transactions": transactions}), 200
-
-@dms_bp.route("/merchant/transactions/filter", methods=["POST"])
-@jwt_required()
-def filter_merchant_transactions():
-    """ Filter transactions based on date, status, or customer """
-    user_id = get_jwt_identity()
-    merchant = merchants_collection.find_one({"user_id": str(user_id)})
-
-    if not merchant:
-        return jsonify({"error": "Merchant not found"}), 404
-
-    merchant_ext_id = merchant["ext_id"]
-    data = request.json
-
-    query = {"merchant_ext_id": merchant_ext_id}
-
-    if "status" in data:
-        query["status"] = data["status"]
-
-    if "start_date" in data and "end_date" in data:
-        query["created_at"] = {
-            "$gte": datetime.strptime(data["start_date"], "%Y-%m-%d"),
-            "$lte": datetime.strptime(data["end_date"], "%Y-%m-%d"),
-        }
-
-    transactions = list(payments_collection.find(query, {"_id": 0}))
-
-    return jsonify({"transactions": transactions}), 200
-
-@dms_bp.route("/merchant/refund", methods=["POST"])
-@jwt_required()
-def merchant_refund():
-    """ Process a refund request """
-    data = request.json
-    user_id = get_jwt_identity()
-
-    merchant = merchants_collection.find_one({"user_id": str(user_id)})
-    if not merchant:
-        return jsonify({"error": "Merchant not found"}), 404
-
-    merchant_ext_id = merchant["ext_id"]
-    transaction = payments_collection.find_one({
-        "merchant_ext_id": merchant_ext_id,
-        "acquirer_authorization_id": data["acquirer_authorization_id"]
-    })
-
-    if not transaction:
-        return jsonify({"error": "Transaction not found"}), 404
-
-    refund_payload = {
-        "merchant_refund_id": f"refund_{uuid.uuid4().hex[:12]}",
-        "acquirer_authorization_id": data["acquirer_authorization_id"],
-        "amount": data["amount"],
-        "reason": data.get("reason", "Customer requested refund")
-    }
-
-    response = requests.post(
-        f"{DMS_BASE_URL}/refund",
-        json=refund_payload,
-        headers={"Content-Type": "application/json"},
-        auth=HTTPBasicAuth(merchant["bluecode_access_id"], merchant["bluecode_secret_key"])
-    )
-
-    return jsonify(response.json()), response.status_code

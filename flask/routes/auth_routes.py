@@ -21,17 +21,14 @@ try:
     # Check if MongoDB is connected
     client.admin.command("ping")
     print("✅ MongoDB connection successful!")
-    db = client.get_database("Bluecode")  # Specify database name explicitly
+    db = client.get_database("Bluecode")
 except ConnectionFailure:
     print("❌ MongoDB connection failed!")
-    db = None  # Ensure db is None if connection fails
+    db = None  
 
-
-# 🔥 JWT Configuration (Directly Initialized)
 app.config["JWT_SECRET_KEY"] = "asbajbjksbkwbkjbwkbjjbj"
 jwt = JWTManager(app)
 
-# 🔥 Flask-Mail Configuration (Directly Initialized)
 app.config.update(
     MAIL_SERVER="smtp.gmail.com",
     MAIL_PORT=587,
