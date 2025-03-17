@@ -2,14 +2,14 @@ import React, { useEffect, useRef } from "react";
 import { View, Text, Image, TouchableOpacity, Animated, StyleSheet, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
-const { height } = Dimensions.get("window"); // Get screen height for dynamic spacing
+const { height } = Dimensions.get("window"); 
 
 const Welcome = () => {
   const navigation = useNavigation();
 
   // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current; // Opacity animation
-  const slideAnim = useRef(new Animated.Value(50)).current; // Slide animation
+  const fadeAnim = useRef(new Animated.Value(0)).current; 
+  const slideAnim = useRef(new Animated.Value(50)).current; 
 
   useEffect(() => {
     Animated.parallel([
@@ -30,7 +30,7 @@ const Welcome = () => {
     <View style={styles.container}>
       {/* Animated Image */}
       <Animated.Image
-        source={require("../assets/bluepay.png")} // Replace with your welcome image
+        source={require("../assets/logo.png")} 
         style={[styles.image, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         resizeMode="contain"
       />
@@ -60,7 +60,7 @@ const Welcome = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#003366", // Blue background
+    backgroundColor: "#F5F9FF", 
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
@@ -73,12 +73,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 26,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#003366",
     marginTop: 20,
   },
   paragraph: {
     fontSize: 16,
-    color: "#fff",
+    color: "#003366",
     textAlign: "center",
     marginTop: 20,
     paddingHorizontal: 10,
@@ -86,12 +86,12 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: "absolute",
-    bottom: height * 0.08, // Dynamically position the button at the bottom
+    bottom: height * 0.08, 
     width: "100%",
     alignItems: "center",
   },
   button: {
-    backgroundColor: "#FFD700", // Gold button
+    backgroundColor: "#FFD700", 
     paddingVertical: 14,
     paddingHorizontal: 100,
     borderRadius: 30,

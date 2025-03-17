@@ -558,18 +558,18 @@ def check_refund_status():
 
     merchant_ext_id = refund_record.get("merchant_ext_id")
 
-    # Fetch Merchant Credentials
+  
     bluecode_access_id, bluecode_secret_key = get_merchant_credentials(merchant_ext_id)
     if not bluecode_access_id or not bluecode_secret_key:
         return jsonify({"error": "Merchant credentials not found"}), 401
 
-    # Build Refund Status Check Payload
+ 
     status_payload = {"merchant_refund_id": merchant_refund_id}
     logging.info(f"📤 Refund Status Payload: {status_payload}")
 
     headers = {"Content-Type": "application/json"}
 
-    # Send Refund Status Check Request
+   
     response = requests.post(
         f"{DMS_BASE_URL}/refund/status",
         json=status_payload,
@@ -603,12 +603,10 @@ def bluecode_webhook():
     if not data:
         return jsonify({"error": "Invalid data received"}), 400
 
-    # Extract relevant transaction details
     merchant_tx_id = data.get("merchant_tx_id")
     status = data.get("payment", {}).get("state", "UNKNOWN")
     acquirer_tx_id = data.get("payment", {}).get("acquirer_tx_id")
 
-    # Find the transaction in DB and update its status
     result = payments_collection.update_one(
         {"merchant_tx_id": merchant_tx_id},
         {"$set": {"status": status, "acquirer_tx_id": acquirer_tx_id, "webhook_data": data}}
@@ -623,31 +621,27 @@ def bluecode_webhook():
 @dms_bp.route("/authorizations", methods=["GET"])
 @jwt_required()
 def get_authorizations():
-    user_id = get_jwt_identity()  # Get user_id from JWT
+    user_id = get_jwt_identity()  
+    print(f"🔹 Received user_id (JWT): {user_id}")  
 
-    print(f"🔹 Received user_id (JWT): {user_id}")  # ✅ Debugging
 
-    # Ensure user_id is a string
     user_id = str(user_id)
 
-    # Find the merchant associated with this user_id
     merchant = merchants_collection.find_one({"user_id": user_id})
 
     if not merchant:
-        print(f"🔹 No merchant found with user_id: {user_id}")  # ✅ Debugging
-        all_merchants = list(merchants_collection.find({}, {"user_id": 1}))  # Fetch all merchants' user_id
-        print(f"🔹 All merchants' user_id values: {all_merchants}")  # ✅ Debugging
+        print(f"🔹 No merchant found with user_id: {user_id}")  
+        all_merchants = list(merchants_collection.find({}, {"user_id": 1}))  
+        print(f"🔹 All merchants' user_id values: {all_merchants}")  
         return jsonify({"error": "Merchant not found"}), 404
 
-    # Extract merchant_ext_id
-    merchant_ext_id = merchant.get("ext_id")  # Get merchant's actual ID
+    merchant_ext_id = merchant.get("ext_id")  
 
-    print(f"🔹 Found merchant with _id (merchant_ext_id): {merchant_ext_id}")  # ✅ Debugging
+    print(f"🔹 Found merchant with _id (merchant_ext_id): {merchant_ext_id}")  
 
-    # Find authorizations for this merchant
     authorizations = list(authorizations_collection.find({"merchant_ext_id": merchant_ext_id}))
 
-    print(f"🔹 Found {len(authorizations)} transactions in DB")  # ✅ Debugging
+    print(f"🔹 Found {len(authorizations)} transactions in DB") 
 
     if not authorizations:
         return jsonify({"transactions": []}), 200

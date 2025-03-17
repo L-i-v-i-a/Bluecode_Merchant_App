@@ -10,14 +10,23 @@ const WalletScreen = () => {
     fetchWallet();
   }, []);
 
-  const fetchWallet = async () => {
-    const data = await getWallet();
-    if (data.error) {
-      setError(data.error);
-    } else {
-      setWallet(data.wallet);
+    const fetchWallet = async () => {
+    const token = await AsyncStorage.getItem("token");
+    const merchantId = await AsyncStorage.getItem("merchant_ext_id"); // Get stored merchant ID
+  
+    if (!token) return { error: "No token found" };
+    if (!merchantId) return { error: "Merchant ID not found" };
+  
+    try {
+      const response = await api.get("/wallets", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      return error.response?.data || { error: "Failed to fetch wallet" };
     }
   };
+  
 
   return (
     <View style={styles.container}>

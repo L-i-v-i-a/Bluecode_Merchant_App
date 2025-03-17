@@ -1,131 +1,190 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, Alert } from 'react-native';
-import axios from 'axios';
+import { 
+  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal 
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Replace with your backend URL
-const BACKEND_URL = 'http://192.168.0.119:4000/merchant/get-bluescan-app';
+const CreateBranchScreen = ({ navigation }) => {
+  const [merchantExtId, setMerchantExtId] = useState('');
+  const [name, setName] = useState('');
+  const [city, setCity] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [zip, setZip] = useState('');
+  const [country, setCountry] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactGender, setContactGender] = useState('FEMALE');
+  const [bookingPrefix, setBookingPrefix] = useState('');
+  const [metaProduct, setMetaProduct] = useState('bluescan app');
+  
+  const [loading, setLoading] = useState(false);
+  const [responseModal, setResponseModal] = useState(false);
+  const [branchExtId, setBranchExtId] = useState('');
+  const [currentStep, setCurrentStep] = useState(1);
 
-const BlueScan = () => {
-  const [merchantId, setMerchantId] = useState('');
-  const [extId, setExtId] = useState('');
-  const [bluescanAppId, setBluescanAppId] = useState('');
-  const [blueScanAppData, setBlueScanAppData] = useState(null);
-  const [jwtToken, setJwtToken] = useState('');
-
+  // Fetch Merchant `ext_id` from AsyncStorage
   useEffect(() => {
-    // Retrieve JWT token from AsyncStorage on component mount
-    const fetchJWTToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        if (token) {
-          setJwtToken(token);
-        } else {
-          Alert.alert('Error', 'No JWT token found');
-        }
-      } catch (e) {
-        console.error('Failed to fetch the JWT token', e);
+    const getMerchantExtId = async () => {
+      const storedExtId = await AsyncStorage.getItem('merchant_ext_id');
+      if (storedExtId) {
+        setMerchantExtId(storedExtId);
       }
     };
-    
-    fetchJWTToken();
+    getMerchantExtId();
   }, []);
 
-  // Handle form submission
-  const fetchBlueScanApp = async () => {
-    if (!merchantId || !extId || !bluescanAppId) {
-      Alert.alert('Error', 'Please provide all fields');
+  // Handle Branch Creation
+  const handleCreateBranch = async () => {
+    if (!merchantExtId) {
+      alert("Merchant ID not found. Please register a merchant first.");
       return;
     }
 
-    if (!token) {
-      Alert.alert('Error', 'JWT token is missing');
-      return;
-    }
+    setLoading(true);
+    const branchData = {
+      name,
+      address: {
+        city,
+        line_1: addressLine1,
+        line_2: addressLine2,
+        zip,
+        country,
+      },
+      contact: {
+        name: contactName,
+        emails: [contactEmail],
+        phone: contactPhone,
+        gender: contactGender,
+      },
+      booking_reference_prefix: bookingPrefix,
+      meta: { product: metaProduct },
+    };
 
     try {
-      const response = await axios.get(`${BACKEND_URL}/${merchantId}/${extId}/${bluescanAppId}`, {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`http://192.168.0.119:4000/merchant/merchant/${merchantExtId}/branch`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`, 
-        }
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(branchData),
       });
-      setBlueScanAppData(response.data.data);
+
+      const data = await response.json();
+      setLoading(false);
+
+      if (response.ok) {
+        setBranchExtId(data.ext_id);
+        await AsyncStorage.setItem('branch_ext_id', data.ext_id);
+        setResponseModal(true);
+      } else {
+        alert(data.error);
+      }
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to fetch BlueScan app');
+      setLoading(false);
+      alert('Branch creation failed');
+    }
+  };
+
+  const handleNextStep = () => {
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleCreateBranch(); // Final submission
+    }
+  };
+
+  const handleBackStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Fetch BlueScan App</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Merchant ID"
-        value={merchantId}
-        onChangeText={setMerchantId}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Ext ID"
-        value={extId}
-        onChangeText={setExtId}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="BlueScan App ID"
-        value={bluescanAppId}
-        onChangeText={setBluescanAppId}
-      />
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Create Branch</Text>
       
-      <Button title="Fetch BlueScan App" onPress={fetchBlueScanApp} />
-
-      {blueScanAppData && (
-        <View style={styles.resultContainer}>
-          <Text style={styles.result}>Name: {blueScanAppData.name}</Text>
-          <Text style={styles.result}>State: {blueScanAppData.state}</Text>
-          <Text style={styles.result}>SDK Host: {blueScanAppData.sdk_host}</Text>
-          <Text style={styles.result}>Reference: {blueScanAppData.reference}</Text>
-          <Text style={styles.result}>Onboarding URL: {blueScanAppData.onboarding_url}</Text>
+      {currentStep === 1 && (
+        <View>
+          <TextInput style={styles.input} placeholder="Branch Name" value={name} onChangeText={setName} />
+          <TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} />
+          <TextInput style={styles.input} placeholder="Address Line 1" value={addressLine1} onChangeText={setAddressLine1} />
+          <TextInput style={styles.input} placeholder="Address Line 2 (Optional)" value={addressLine2} onChangeText={setAddressLine2} />
+          <TextInput style={styles.input} placeholder="ZIP Code" value={zip} onChangeText={setZip} />
+          <TextInput style={styles.input} placeholder="Country" value={country} onChangeText={setCountry} />
         </View>
       )}
-    </View>
+
+      {currentStep === 2 && (
+        <View>
+          <Text style={styles.sectionTitle}>Contact Person</Text>
+          <TextInput style={styles.input} placeholder="Full Name" value={contactName} onChangeText={setContactName} />
+          <TextInput style={styles.input} placeholder="Email" value={contactEmail} onChangeText={setContactEmail} />
+          <TextInput style={styles.input} placeholder="Phone Number" value={contactPhone} onChangeText={setContactPhone} />
+        </View>
+      )}
+
+      {currentStep === 3 && (
+        <View>
+          <TextInput style={styles.input} placeholder="Booking Reference Prefix" value={bookingPrefix} onChangeText={setBookingPrefix} />
+          <TextInput style={styles.input} placeholder="Meta Product" value={metaProduct} onChangeText={setMetaProduct} />
+        </View>
+      )}
+
+      <View style={styles.buttonContainer}>
+        {currentStep > 1 && (
+          <TouchableOpacity style={styles.button} onPress={handleBackStep}>
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+        )}
+        
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleNextStep} 
+          disabled={loading}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{currentStep === 3 ? 'Submit' : 'Next'}</Text>}
+        </TouchableOpacity>
+      </View>
+
+      {/* Success Modal */}
+      <Modal visible={responseModal} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Branch Created Successfully!</Text>
+            <Text style={styles.modalText}>Branch ID: {branchExtId}</Text>
+            <TouchableOpacity 
+              style={styles.modalButton} 
+              onPress={() => {
+                setResponseModal(false);
+                navigation.replace('Dashboard');
+              }}
+            >
+              <Text style={styles.buttonText}>Go to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  input: {
-    width: '100%',
-    padding: 10,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderRadius: 5,
-    borderColor: '#ccc',
-  },
-  resultContainer: {
-    marginTop: 20,
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 5,
-    borderColor: '#ccc',
-    width: '100%',
-  },
-  result: {
-    fontSize: 16,
-    marginVertical: 5,
-  },
+  container: { flexGrow: 1, padding: 20, backgroundColor: '#f8f9fa' },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#007AFF', textAlign: 'center', marginBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#007AFF', marginTop: 20, marginBottom: 10 },
+  input: { padding: 12, borderWidth: 1, borderColor: '#007AFF', borderRadius: 8, marginBottom: 15, backgroundColor: '#fff' },
+  button: { backgroundColor: '#007AFF', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 20 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { width: '85%', padding: 20, backgroundColor: '#fff', borderRadius: 12, alignItems: 'center', elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#007AFF' },
+  modalText: { fontSize: 16, color: '#333', marginBottom: 10 },
+  modalButton: { backgroundColor: '#007AFF', paddingVertical: 12, borderRadius: 8, alignItems: 'center', width: '100%' },
 });
 
-export default BlueScan;
+export default CreateBranchScreen;

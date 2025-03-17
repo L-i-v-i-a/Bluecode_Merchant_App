@@ -21,10 +21,7 @@ import Welcome from './screens/Welcome';
 import Splash from './screens/Splash';
 import PaymentPage from './screens/MakePayments';
 import CreateBluescanApp from './screens/CreateBlueScan';
-import ViewPayments from './screens/ViewPayments';
 import QrCode from './screens/QrCode';
-import WalletTrans from './screens/WalletTrans';
-import Scanner from './screens/Scanner';
 import CancelPayments from './screens/CancelPayments';
 import BlueScan from './screens/BlueScan';
 import EditBlueScan from './screens/EditBlueScan';
@@ -35,22 +32,17 @@ import WalletScreen from './screens/Wallet';
 const Stack = createNativeStackNavigator();
 
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Define authentication state
-
   return (
     <NavigationContainer>
-        <Stack.Navigator initialRouteName={"Register"}>
+        <Stack.Navigator initialRouteName={"Splash"}>
         <Stack.Screen name="Deposit" component={DepositScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ViewBlueScan" component={BlueScan} options={{ headerShown: false }} />
         <Stack.Screen name="EditBluescan" component={EditBlueScan} options={{ headerShown: false }} />
         <Stack.Screen name="BlueScan" component={CreateBluescanApp} options={{ headerShown: false }} />
         <Stack.Screen name="CancelPayment" component={CancelPayments} options={{ headerShown: false }} />
         <Stack.Screen name="VirtualCards" component={VirtualCardScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="WalletTransactions" component={WalletTrans} options={{ headerShown: false }} /> 
         <Stack.Screen name="Wallet" component={WalletScreen} options={{ headerShown: false }} />
         <Stack.Screen name="QrCode" component={QrCode} options={{ headerShown: false }} />
-        <Stack.Screen name="ViewPayments" component={ViewPayments} options={{ headerShown: false }} />
-        <Stack.Screen name="PaymentStatus" component={Login} options={{ headerShown: false }} />
         <Stack.Screen name="MakePayments" component={PaymentPage} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome" component={Welcome} options={{ headerShown: false }} />
         <Stack.Screen name="Splash" component={Splash} options={{ headerShown: false }} />

@@ -24,19 +24,24 @@ registered_merchants = db["registered_merchants"]
 @wallet_bp.route('/wallets', methods=['GET'])
 @jwt_required()
 def get_wallet():
-    user_id = get_jwt_identity()
+    user_id = get_jwt_identity()  
+    merchant_id = request.args.get("merchant_id") 
+
+    if not merchant_id:
+        return jsonify({"error": "Merchant ID is required"}), 400
+
     user = users_collection.find_one({"_id": ObjectId(user_id)})
 
     if not user or not user.get("is_merchant", False):
         return jsonify({"error": "Merchant not found"}), 404
 
-    wallet = wallets.find_one({"user_id": str(user["_id"])})
+   
+    wallet = wallets.find_one({"user_id": merchant_id})
 
     if not wallet:
         return jsonify({"error": "Wallet not found"}), 404
 
     return jsonify({"wallet": wallet}), 200
-
 @wallet_bp.route('/deposit', methods=['POST'])
 @jwt_required()
 def deposit_money():

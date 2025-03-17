@@ -18,7 +18,7 @@ MONGO_URI = "mongodb+srv://oliviaoguelina:olivia@bluecode.17a3e.mongodb.net/?ret
 client = MongoClient(MONGO_URI)
 
 try:
-    # Check if MongoDB is connected
+   
     client.admin.command("ping")
     print("✅ MongoDB connection successful!")
     db = client.get_database("Bluecode")
@@ -196,7 +196,7 @@ def update_profile():
     user_id = get_jwt_identity()
 
     try:
-        user_id = ObjectId(user_id)  # Convert user_id to MongoDB ObjectId
+        user_id = ObjectId(user_id)  
     except:
         return jsonify({"error": "Invalid user ID"}), 400
     

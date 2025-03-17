@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Text, Alert, StyleSheet } from 'react-native';
+import { View, TextInput, Button, Text, Alert, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -61,7 +61,17 @@ const CancelPayment = () => {
         onChangeText={setMerchantTxId}
       />
       
-      <Button title={isProcessing ? 'Cancelling...' : 'Cancel Payment'} onPress={cancelPayment} disabled={isProcessing} />
+      <TouchableOpacity
+        style={[styles.button, isProcessing && styles.buttonDisabled]}
+        onPress={cancelPayment}
+        disabled={isProcessing}
+      >
+        {isProcessing ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Cancel Payment</Text>
+        )}
+      </TouchableOpacity>
       
       {responseMessage && <Text style={styles.response}>{responseMessage}</Text>}
     </View>
@@ -74,24 +84,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#f8f9fa',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
+    color: '#007AFF',
     marginBottom: 20,
+    textAlign: 'center',
   },
   input: {
     width: '100%',
-    padding: 10,
-    marginBottom: 15,
+    padding: 14,
+    marginBottom: 20,
     borderWidth: 1,
-    borderRadius: 5,
-    borderColor: '#ccc',
+    borderRadius: 8,
+    borderColor: '#007AFF',
+    backgroundColor: '#fff',
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: '#B0D1FF',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   response: {
     marginTop: 20,
     fontSize: 16,
     color: 'green',
+    textAlign: 'center',
   },
 });
 

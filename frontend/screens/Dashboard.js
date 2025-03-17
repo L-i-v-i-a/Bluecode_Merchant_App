@@ -1,39 +1,45 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 const Dashboard = () => {
   const navigation = useNavigation();
   const [token, setToken] = useState(null);
   const [branchExtId, setBranchExtId] = useState(null);
-  const [walletExists, setWalletExists] = useState(false);
+  const [bluescanId, setBluescanId] = useState(null);
   const [paymentsEnabled, setPaymentsEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Retrieve JWT Token & Branch, Wallet, Payments Info
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const storedToken = await AsyncStorage.getItem('token');
-        const storedBranchId = await AsyncStorage.getItem('branch_ext_id');
-        const storedWallet = await AsyncStorage.getItem('wallet_exists');
-        const storedPayments = await AsyncStorage.getItem('payments_enabled');
+        const storedToken = await AsyncStorage.getItem("token");
+        const storedBranchId = await AsyncStorage.getItem("branch_ext_id");
+        const storedbluescanId = await AsyncStorage.getItem("bluescan_id");
+        const storedPayments = await AsyncStorage.getItem("payments_enabled");
 
         if (!storedToken) {
-          Alert.alert('Session Expired', 'Please log in again.');
-          navigation.replace('Login');
+          Alert.alert("Session Expired", "Please log in again.");
+          navigation.replace("Login");
           return;
         }
 
         setToken(storedToken);
         setBranchExtId(storedBranchId);
-        setWalletExists(storedWallet === 'true'); // Convert string to boolean
-        setPaymentsEnabled(storedPayments === 'true');
-
+        setBluescanId(storedbluescanId);
+        setPaymentsEnabled(storedPayments === "true");
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        Alert.alert('Error', 'Failed to retrieve session data.');
+        console.error("Error fetching user data:", error);
+        Alert.alert("Error", "Failed to retrieve session data.");
       } finally {
         setLoading(false);
       }
@@ -42,7 +48,6 @@ const Dashboard = () => {
     fetchUserData();
   }, []);
 
-  // ✅ Show Loading Indicator while fetching data
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -54,76 +59,134 @@ const Dashboard = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Merchant Dashboard</Text>
+      {/* Top Header with Scan Icon */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Merchant Dashboard</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("ScanQR")}>
+          <Ionicons name="scan-outline" size={28} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.cardContainer}>
-        {/* Business Information */}
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('BusinessInfo')}>
-          <Text style={styles.cardTitle}>Business Info</Text>
-          <Text style={styles.cardDescription}>View & update your business details</Text>
-        </TouchableOpacity>
-
-        {/* Branch Handling */}
-        <TouchableOpacity 
-          style={styles.card} 
-          onPress={() => navigation.navigate(branchExtId ? 'BranchDetails' : 'Branch')}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate("BusinessInfo")}
         >
-          <Text style={styles.cardTitle}>{branchExtId ? 'View Branch' : 'Create Branch'}</Text>
-          <Text style={styles.cardDescription}>
-            {branchExtId ? 'Manage your branch details' : 'Create a branch for your business'}
-          </Text>
+          <Ionicons name="briefcase-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>Business Info</Text>
+            <Text style={styles.cardDescription}>
+              View & update your business details
+            </Text>
+          </View>
         </TouchableOpacity>
 
-        {/* Wallet Handling */}
-        <TouchableOpacity 
-          style={styles.card} 
-          onPress={() => navigation.navigate(walletExists ? 'WalletTrans' : 'SetupWallet')}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(branchExtId ? "BranchDetails" : "Branch")}
         >
-          <Text style={styles.cardTitle}>{walletExists ? 'Wallet' : 'Setup Wallet'}</Text>
-          <Text style={styles.cardDescription}>
-            {walletExists ? 'Manage your account balance & transactions' : 'Set up your wallet'}
-          </Text>
+          <Ionicons name="storefront-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>
+              {branchExtId ? "View Branch" : "Create Branch"}
+            </Text>
+            <Text style={styles.cardDescription}>
+              {branchExtId
+                ? "Manage your branch details"
+                : "Create a branch for your business"}
+            </Text>
+          </View>
         </TouchableOpacity>
 
-        {/* Payments Handling */}
-        <TouchableOpacity 
-          style={styles.card} 
-          onPress={() => navigation.navigate(paymentsEnabled ? 'Payments' : 'MakePayments')}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() =>
+            navigation.navigate("Wallet")
+          }
         >
-          <Text style={styles.cardTitle}>{paymentsEnabled ? 'Payments' : 'Enable Payments'}</Text>
-          <Text style={styles.cardDescription}>
-            {paymentsEnabled ? 'Accept & process payments' : 'Set up payments for your business'}
-          </Text>
+          <Ionicons name="wallet-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>
+            Wallet
+            </Text>
+            <Text style={styles.cardDescription}>
+               Manage your account balance & transactions 
+            </Text>
+          </View>
         </TouchableOpacity>
 
-        {/* Payments Handling */}
-        <TouchableOpacity 
-          style={styles.card} 
-          onPress={() => navigation.navigate('PayDash')}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() =>
+            navigation.navigate(paymentsEnabled ? "Payments" : "MakePayments")
+          }
         >
-          <Text style={styles.cardTitle}>Authorize Payment</Text>
-          <Text style={styles.cardDescription}>
-            authorize your payments
-          </Text>
+          <Ionicons name="card-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>
+              {paymentsEnabled ? "Payments" : "Enable Payments"}
+            </Text>
+            <Text style={styles.cardDescription}>
+              {paymentsEnabled
+                ? "Accept & process payments"
+                : "Set up payments for your business"}
+            </Text>
+          </View>
         </TouchableOpacity>
 
-        {/* Transactions Handling */}
-        <TouchableOpacity 
-          style={styles.card} 
-          onPress={() => navigation.navigate('TransactionsPage')}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() =>
+            navigation.navigate(bluescanId ? "ViewBlueScan" : "BlueScan")
+          }
         >
-          <Text style={styles.cardTitle}>Authorized Transactions</Text>
-          <Text style={styles.cardDescription}>
-            view the transactions that are authorize
-          </Text>
+          <Ionicons name="card-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>
+              {paymentsEnabled ? "BlueScan App" : "Create BlueScan App"}
+            </Text>
+            <Text style={styles.cardDescription}>
+              {paymentsEnabled
+                ? "Use the app to process transactions"
+                : "Set up your own bluescan app "}
+            </Text>
+          </View>
         </TouchableOpacity>
 
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate("PayDash")}
+        >
+          <Ionicons name="checkmark-circle-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>Authorize Payment</Text>
+            <Text style={styles.cardDescription}>Authorize your payments</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate("TransactionsPage")}
+        >
+          <Ionicons name="document-text-outline" size={24} color="#007AFF" />
+          <View>
+            <Text style={styles.cardTitle}>Authorized Transactions</Text>
+            <Text style={styles.cardDescription}>
+              View the transactions that are authorized
+            </Text>
+          </View>
+        </TouchableOpacity>
       </View>
+
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={async () => {
-        await AsyncStorage.removeItem('token'); // ✅ Remove token
-        navigation.replace('Login'); // ✅ Redirect to login
-      }}>
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={async () => {
+          await AsyncStorage.removeItem("token");
+          navigation.replace("Login");
+        }}
+      >
         <Text style={styles.buttonText}>Logout</Text>
       </TouchableOpacity>
     </View>
@@ -133,61 +196,69 @@ const Dashboard = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     padding: 20,
-    alignItems: 'center',
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 20,
+    fontWeight: "bold",
+    color: "#007AFF",
   },
   cardContainer: {
-    width: '100%',
+    width: "100%",
   },
   card: {
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 3,
+    elevation: 4,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontWeight: "bold",
+    color: "#007AFF",
+    marginLeft: 15,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 5,
+    color: "#666",
+    marginTop: 4,
+    marginLeft: 15,
   },
   logoutButton: {
-    backgroundColor: '#FF3B30',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: "#FF3B30",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
     marginTop: 20,
-    width: '100%',
+    width: "100%",
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: "#007AFF",
     marginTop: 10,
   },
 });

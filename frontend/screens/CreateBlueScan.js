@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Picker } from '@react-native-picker/picker';
 
 const CreateBluescanApp = () => {
   // State to hold form data
@@ -12,19 +13,15 @@ const CreateBluescanApp = () => {
   // Function to create BlueScan app
   const createBluescanApp = async () => {
     try {
-      // Retrieve merchant_id, ext_id, and token from AsyncStorage
       const merchant_id = await AsyncStorage.getItem('merchant_id');
       const ext_id = await AsyncStorage.getItem('ext_id');
-      const token = await AsyncStorage.getItem('auth_token'); // Assuming token is stored under 'auth_token'
+      const token = await AsyncStorage.getItem('auth_token');
 
-      // Check if all required data exists
       if (!merchant_id || !ext_id || !token) {
-        console.error('Missing required data: merchant_id, ext_id, or token');
         Alert.alert('Error', 'Required data missing. Please try again.');
         return;
       }
 
-      // Prepare the data for creating BlueScan app
       const bluescanAppData = {
         merchant_id,
         ext_id,
@@ -35,7 +32,6 @@ const CreateBluescanApp = () => {
         }
       };
 
-      // Sending request to your Flask backend
       const response = await axios.post(
         'http://192.168.0.119:4000/merchant/create-bluescan-app', 
         bluescanAppData, 
@@ -46,47 +42,108 @@ const CreateBluescanApp = () => {
         }
       );
 
-      // Handle successful response
-      console.log('Response from Flask backend:', response.data);
       Alert.alert('Success', 'BlueScan App created successfully!');
     } catch (error) {
-      // Handle errors
-      console.error('Error creating BlueScan app:', error);
       Alert.alert('Error', 'Failed to create BlueScan App. Please try again.');
     }
   };
 
   return (
-    <View style={{ padding: 20 }}>
-      <Text style={{ fontSize: 18, marginBottom: 10 }}>Create BlueScan App</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Create BlueScan App</Text>
 
-      <Text>Name of the App</Text>
-      <TextInput 
-        value={appName} 
-        onChangeText={setAppName} 
-        placeholder="Enter app name"
-        style={{ borderWidth: 1, marginBottom: 10, padding: 8, fontSize: 16 }} 
-      />
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>App Name</Text>
+        <TextInput 
+          value={appName} 
+          onChangeText={setAppName} 
+          placeholder="Enter app name"
+          style={styles.input} 
+        />
+      </View>
 
-      <Text>Type of the App</Text>
-      <TextInput 
-        value={appType} 
-        onChangeText={setAppType} 
-        placeholder="Enter app type (e.g., admin)"
-        style={{ borderWidth: 1, marginBottom: 10, padding: 8, fontSize: 16 }} 
-      />
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>App Type</Text>
+        <Picker
+          selectedValue={appType}
+          onValueChange={(itemValue) => setAppType(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Admin" value="admin" />
+          <Picker.Item label="User" value="user" />
+          <Picker.Item label="Merchant" value="merchant" />
+        </Picker>
+      </View>
 
-      <Text>SDK Host</Text>
-      <TextInput 
-        value={sdkHost} 
-        onChangeText={setSdkHost} 
-        placeholder="Enter SDK host"
-        style={{ borderWidth: 1, marginBottom: 20, padding: 8, fontSize: 16 }} 
-      />
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>SDK Host</Text>
+        <TextInput 
+          value={sdkHost} 
+          onChangeText={setSdkHost} 
+          placeholder="Enter SDK host"
+          style={styles.input} 
+        />
+      </View>
 
-      <Button title="Create BlueScan App" onPress={createBluescanApp} />
+      <TouchableOpacity style={styles.button} onPress={createBluescanApp}>
+        <Text style={styles.buttonText}>Create BlueScan App</Text>
+      </TouchableOpacity>
     </View>
   );
 };
+
+// Updated Styles
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#F4F6F9',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  picker: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
 
 export default CreateBluescanApp;

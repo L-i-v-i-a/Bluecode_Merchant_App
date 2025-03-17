@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { 
+    View, Text, ScrollView, TouchableOpacity, ActivityIndicator, 
+    StyleSheet, Alert, Image 
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BranchDetailsScreen = ({ navigation }) => {
@@ -61,8 +64,7 @@ const BranchDetailsScreen = ({ navigation }) => {
           console.error('❌ Fetch Error:', error);
           Alert.alert('Network Error', 'Unable to fetch branches.');
         }
-      };
-      
+    };
       
     return (
       <ScrollView contentContainerStyle={styles.container}>
@@ -76,26 +78,32 @@ const BranchDetailsScreen = ({ navigation }) => {
         ) : branches.length > 0 ? (
           branches.map((branch) => (
             <View key={branch.ext_id} style={styles.card}>
-              <Text style={styles.cardTitle}>{branch.name}</Text>
-              <Text style={styles.cardText}>City: {branch.address.city}</Text>
-              <Text style={styles.cardText}>Address: {branch.address.line_1}, {branch.address.line_2}</Text>
-              <Text style={styles.cardText}>ZIP Code: {branch.address.zip}</Text>
-              <Text style={styles.cardText}>Country: {branch.address.country}</Text>
-              <Text style={styles.cardText}>Contact: {branch.contact.name} ({branch.contact.phone})</Text>
-              <TouchableOpacity 
-              style={styles.button} 
-              onPress={() => navigation.navigate('EditBranch', { branchExtId: branch.ext_id })}
-               >
-              <Text style={styles.buttonText}>Edit Branch</Text>
-              </TouchableOpacity>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>{branch.name}</Text>
+                <TouchableOpacity 
+                  style={styles.editButton} 
+                  onPress={() => navigation.navigate('EditBranch', { branchExtId: branch.ext_id })}
+                >
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.cardText}><Text style={styles.bold}>City:</Text> {branch.address.city}</Text>
+              <Text style={styles.cardText}><Text style={styles.bold}>Address:</Text> {branch.address.line_1}, {branch.address.line_2}</Text>
+              <Text style={styles.cardText}><Text style={styles.bold}>ZIP Code:</Text> {branch.address.zip}</Text>
+              <Text style={styles.cardText}><Text style={styles.bold}>Country:</Text> {branch.address.country}</Text>
+              <Text style={styles.cardText}><Text style={styles.bold}>Contact:</Text> {branch.contact.name} ({branch.contact.phone})</Text>
             </View>
           ))
         ) : (
-          <Text style={styles.noDataText}>No branches found.</Text>
+          <View style={styles.noDataContainer}>
+            <Image source={require('../assets/no-data.png')} style={styles.noDataImage} />
+            <Text style={styles.noDataText}>No branches found.</Text>
+          </View>
         )}
   
         <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate('Branch')}>
-          <Text style={styles.buttonText}>Create New Branch</Text>
+          <Text style={styles.createButtonText}>Create New Branch</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -104,40 +112,49 @@ const BranchDetailsScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: { flexGrow: 1, padding: 20, backgroundColor: '#f8f9fa', alignItems: 'center' },
-    title: { fontSize: 24, fontWeight: 'bold', color: '#007AFF', textAlign: 'center', marginBottom: 20 },
+    title: { fontSize: 26, fontWeight: 'bold', color: '#007AFF', textAlign: 'center', marginBottom: 20 },
     card: { 
       backgroundColor: '#ffffff', 
-      padding: 15, 
-      borderRadius: 10, 
+      padding: 20, 
+      borderRadius: 12, 
       marginBottom: 15, 
       width: '100%', 
       shadowColor: '#000', 
       shadowOffset: { width: 0, height: 2 }, 
       shadowOpacity: 0.1, 
-      shadowRadius: 5, 
+      shadowRadius: 6, 
       elevation: 3 
     },
-    cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#007AFF', marginBottom: 5 },
-    cardText: { fontSize: 14, color: '#333', marginBottom: 5 },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    cardTitle: { fontSize: 20, fontWeight: 'bold', color: '#007AFF' },
+    cardText: { fontSize: 16, color: '#333', marginBottom: 5 },
+    bold: { fontWeight: 'bold' },
+    editButton: { 
+      backgroundColor: '#34C759', 
+      paddingVertical: 6, 
+      paddingHorizontal: 12, 
+      borderRadius: 6 
+    },
+    editButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     loadingText: { fontSize: 16, color: '#007AFF', marginTop: 10 },
-    noDataText: { fontSize: 16, color: 'red', textAlign: 'center', marginTop: 20 },
-    button: { 
-      backgroundColor: '#007AFF', 
-      padding: 10, 
-      borderRadius: 8, 
-      alignItems: 'center', 
-      marginTop: 10 
-    },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    noDataContainer: { alignItems: 'center', marginTop: 20 },
+    noDataText: { fontSize: 18, color: 'gray', textAlign: 'center', marginTop: 10 },
+    noDataImage: { width: 150, height: 150, resizeMode: 'contain' },
     createButton: { 
       backgroundColor: '#007AFF', 
-      padding: 12, 
-      borderRadius: 8, 
+      padding: 14, 
+      borderRadius: 10, 
       alignItems: 'center', 
       marginTop: 20, 
       width: '100%' 
-    }
-  });
-  
+    },
+    createButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+});
+
 export default BranchDetailsScreen;

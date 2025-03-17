@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity 
 } from 'react-native';
@@ -65,40 +65,116 @@ const Merchant = ({ route, navigation }) => {
           <Text style={styles.loadingText}>Fetching merchant details...</Text>
         </View>
       ) : merchantData ? (
-        /* ✅ Display merchant details */
-        <View style={styles.jsonContainer}>
-          <Text style={styles.jsonTitle}>Merchant Details</Text>
-          <ScrollView style={styles.jsonScroll}>
-            <Text style={styles.jsonText}>{JSON.stringify(merchantData, null, 2)}</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Merchant Details</Text>
+          
+          {/* ✅ Merchant Data Display */}
+          <ScrollView style={styles.dataContainer}>
+            <Text style={styles.dataText}>{JSON.stringify(merchantData, null, 2)}</Text>
           </ScrollView>
         </View>
       ) : (
         <Text style={styles.errorText}>No merchant data found.</Text>
       )}
 
-      {/* ✅ Back button */}
-      <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
-        <Text style={styles.buttonText}>Go Back</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("UpdateBus")}>
-        <Text style={styles.buttonText}>Update</Text>
-      </TouchableOpacity>
+      {/* ✅ Action Buttons */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
+          <Text style={styles.buttonText}>Go Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.updateButton]} onPress={() => navigation.navigate("UpdateBus")}>
+          <Text style={styles.buttonText}>Update Profile</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#007AFF', textAlign: 'center', marginBottom: 15 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontSize: 16, color: '#007AFF', marginTop: 10 },
-  jsonContainer: { backgroundColor: '#f8f9fa', padding: 15, borderRadius: 10, marginBottom: 20 },
-  jsonTitle: { fontSize: 18, fontWeight: 'bold', color: '#007AFF', marginBottom: 10 },
-  jsonScroll: { maxHeight: 300 },
-  jsonText: { fontSize: 14, color: '#333', fontFamily: 'monospace' },
-  errorText: { fontSize: 16, color: 'red', textAlign: 'center', marginTop: 20 },
-  button: { backgroundColor: '#007AFF', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  container: { 
+    flexGrow: 1, 
+    padding: 20, 
+    backgroundColor: '#F4F4F9', 
+    alignItems: 'center' 
+  },
+  title: { 
+    fontSize: 26, 
+    fontWeight: 'bold', 
+    color: '#007AFF', 
+    marginBottom: 15, 
+    textAlign: 'center' 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  loadingText: { 
+    fontSize: 16, 
+    color: '#007AFF', 
+    marginTop: 10 
+  },
+  errorText: { 
+    fontSize: 16, 
+    color: 'red', 
+    textAlign: 'center', 
+    marginTop: 20 
+  },
+
+  /** ✅ Merchant Data Card */
+  card: { 
+    backgroundColor: '#ffffff', 
+    padding: 20, 
+    borderRadius: 12, 
+    width: '100%', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 4, 
+    elevation: 4 
+  },
+  cardTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#007AFF', 
+    marginBottom: 10, 
+    textAlign: 'center' 
+  },
+  dataContainer: { 
+    maxHeight: 300, 
+    backgroundColor: '#F8F9FA', 
+    padding: 10, 
+    borderRadius: 8 
+  },
+  dataText: { 
+    fontSize: 14, 
+    color: '#333', 
+    fontFamily: 'monospace' 
+  },
+
+  /** ✅ Buttons */
+  buttonContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginTop: 20, 
+    width: '100%' 
+  },
+  button: { 
+    flex: 1, 
+    backgroundColor: '#007AFF', 
+    paddingVertical: 12, 
+    borderRadius: 8, 
+    alignItems: 'center', 
+    marginHorizontal: 5 
+  },
+  updateButton: { 
+    backgroundColor: '#28A745' 
+  },
+  buttonText: { 
+    color: '#fff', 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
 });
 
 export default Merchant;

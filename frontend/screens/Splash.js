@@ -33,7 +33,7 @@ const Splash = () => {
   return (
     <View style={styles.container}>
       <Animated.Image
-        source={require("../assets/bluepay.png")} // Ensure logo is in assets folder
+        source={require("../assets/logo.png")} 
         style={[styles.logo, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
         resizeMode="contain"
       />
@@ -44,7 +44,7 @@ const Splash = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#003366", // Blue background
+    backgroundColor: "#F5F9FF", 
     alignItems: "center",
     justifyContent: "center",
   },
