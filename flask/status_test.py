@@ -1,14 +1,42 @@
 import requests
+import base64
 
-url = "http://127.0.0.1:4000/payment/status"
-params = {
-    "merchant_tx_id": "937f60a9-c0f1-4c24-9fa8-1020d08e849a"
-}
+# API Credentials
+ACQUIBASE_ACCESS_ID = "fc1f9f72-02c9-47e2-99ea-bc33ba2906d4"
+ACQUIBASE_SECRET_KEY = "da1616ef-caad-4c7b-b7af-e9b98fb97960"
+AQUIBASE_BASE_URL = "https://acquibase-api.acq.int.bluecode.ng/v2"
+
+# Merchant, Branch, and Bluescan App Details
+merchant_id = "67d4073781c62f4ad699bb19"
+ext_id = "1888a06a-0bee-4ade-85e6-3d93e8d5f318"  # Branch external ID
+bluescan_app_id = "1fb884a8-0d8f-474a-beb1-deb087533334"
+
+# Generate Basic Auth Header
+auth_string = f"{ACQUIBASE_ACCESS_ID}:{ACQUIBASE_SECRET_KEY}"
+encoded_auth = base64.b64encode(auth_string.encode()).decode()
+
 headers = {
-    "Authorization": "Bearer <eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc0MjAwOTU4NSwianRpIjoiNTQyNGY0ZGYtYmFjYi00MDhkLThkZWEtOTk1YzJmNTUyMTRjIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjY3ZDQwMTYyNTcyZmFmMmY2Zjg3NDFiMCIsIm5iZiI6MTc0MjAwOTU4NSwiY3NyZiI6IjQ5OWQ2NmQ1LTlhM2QtNGI0Mi04OWNiLTdmYTE4MjNhYzBkZSIsImV4cCI6MTc0MjA5NTk4NX0.iijalNfh6NIksK77CysRWFwS7mCZ6PL_BBtedH7qeEQ>"
+    "Authorization": f"Basic {encoded_auth}",
+    "Content-Type": "application/json"
 }
 
-response = requests.get(url, params=params, headers=headers)
+# Construct the URL
+url = f"{AQUIBASE_BASE_URL}/bluescan_apps/{bluescan_app_id}/activate"
+print(f"🔗 API URL: {url}")
 
-print("Response Status Code:", response.status_code)
-print("Response JSON:", response.json())
+# Make the API request
+response = requests.get(url, headers=headers)
+
+# Print Response
+print("🔍 Response Status Code:", response.status_code)
+print("🔍 Response Text:", response.text)
+
+# Handle Empty Response
+if response.status_code == 200 and response.text.strip():
+    try:
+        json_response = response.json()
+        print("✅ Bluescan App Details:", json_response)
+    except requests.exceptions.JSONDecodeError as e:
+        print("❌ JSON Decode Error:", str(e))
+else:
+    print("⚠️ No valid JSON content received from the API.")

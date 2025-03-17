@@ -34,12 +34,14 @@ from routes.auth_routes import auth_bp
 from routes.merchant_routes import merchant_bp
 from routes.payment_routes import payment_bp
 from routes.dms_routes import dms_bp
+from routes.wallet_routes import wallet_bp
 
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(payment_bp, url_prefix="/payment")
 app.register_blueprint(merchant_bp, url_prefix="/merchant")
 app.register_blueprint(dms_bp, url_prefix="/dms")
+app.register_blueprint(wallet_bp, url_prefix="/wallet")
 
 # Run the app
 if __name__ == "__main__":
-    app.run(debug=True, port=4000)
+    app.run(debug=True, host="0.0.0.0", port=4000)

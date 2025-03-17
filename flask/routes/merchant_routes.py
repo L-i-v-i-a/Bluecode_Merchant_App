@@ -178,6 +178,7 @@ def register_merchant():
                 # ✅ Automatically Create Wallet After Merchant is Registered
                 db.wallets.insert_one({
                     "merchant_id": str(merchant_id),
+                    "user_id":str(user_id),
                     "balance": 0,
                     "currency": "EUR",
                     "created_at": datetime.datetime.utcnow()

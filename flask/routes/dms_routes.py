@@ -70,16 +70,7 @@ def register_authorization():
     if not bluecode_access_id or not bluecode_secret_key:
         return jsonify({"error": "Merchant credentials not found"}), 401
     
-   # Fetch the BlueScan App ID for the correct merchant
-    bluescan_app = bluescan_apps_collection.find_one({
-    "merchant_id": merchant_ext_id  # Ensure we get the right merchant
-})
-
-    if not bluescan_app or "bluescan_app_id" not in bluescan_app:
-        return jsonify({"error": "BlueScan App not found for this merchant"}), 404  # ✅ Fixed Indentation
-
-    bluescan_app_id = bluescan_app["bluescan_app_id"]
-
+   
     # Build Authorization Request Payload
     auth_payload = {
         "branch_ext_id": branch_ext_id,
@@ -94,8 +85,7 @@ def register_authorization():
         "merchant_callback_url": "http://localhost:4000/dms/bluecode-webhook",
         "return_url_success": "http://localhost:3000/payment-success",
         "return_url_failure": "http://localhost:3000/payment-failed",
-        "return_url_cancel": "http://localhost:3000/cart",
-        "bluescan_app_id": bluescan_app_id 
+        "return_url_cancel": "http://localhost:3000/cart"
     }
 
     logging.info(f"📤 Authorization Payload: {auth_payload}")
@@ -629,3 +619,54 @@ def bluecode_webhook():
 
     return jsonify({"message": "Webhook received", "status": status}), 200
 
+
+@dms_bp.route("/authorizations", methods=["GET"])
+@jwt_required()
+def get_authorizations():
+    user_id = get_jwt_identity()  # Get user_id from JWT
+
+    print(f"🔹 Received user_id (JWT): {user_id}")  # ✅ Debugging
+
+    # Ensure user_id is a string
+    user_id = str(user_id)
+
+    # Find the merchant associated with this user_id
+    merchant = merchants_collection.find_one({"user_id": user_id})
+
+    if not merchant:
+        print(f"🔹 No merchant found with user_id: {user_id}")  # ✅ Debugging
+        all_merchants = list(merchants_collection.find({}, {"user_id": 1}))  # Fetch all merchants' user_id
+        print(f"🔹 All merchants' user_id values: {all_merchants}")  # ✅ Debugging
+        return jsonify({"error": "Merchant not found"}), 404
+
+    # Extract merchant_ext_id
+    merchant_ext_id = merchant.get("ext_id")  # Get merchant's actual ID
+
+    print(f"🔹 Found merchant with _id (merchant_ext_id): {merchant_ext_id}")  # ✅ Debugging
+
+    # Find authorizations for this merchant
+    authorizations = list(authorizations_collection.find({"merchant_ext_id": merchant_ext_id}))
+
+    print(f"🔹 Found {len(authorizations)} transactions in DB")  # ✅ Debugging
+
+    if not authorizations:
+        return jsonify({"transactions": []}), 200
+
+    transactions = []
+    for auth in authorizations:
+        transactions.append({
+            "merchant_authorization_id": auth.get("merchant_authorization_id"),
+            "terminal": auth.get("authorization_request", {}).get("terminal"),
+            "operator": auth.get("authorization_request", {}).get("operator"),
+            "source": auth.get("authorization_request", {}).get("source"),
+            "requested_amount": auth.get("authorization_request", {}).get("requested_amount"),
+            "currency": auth.get("authorization_request", {}).get("currency"),
+            "expires_at": auth.get("bluecode_response", {}).get("authorization", {}).get("expires_at"),
+            "checkin_code": auth.get("bluecode_response", {}).get("authorization", {}).get("checkin_code"),
+            "state": auth.get("bluecode_response", {}).get("authorization", {}).get("state"),
+            "return_url_success": auth.get("bluecode_response", {}).get("authorization", {}).get("return_url_success"),
+            "return_url_failure": auth.get("bluecode_response", {}).get("authorization", {}).get("return_url_failure"),
+            "return_url_cancel": auth.get("bluecode_response", {}).get("authorization", {}).get("return_url_cancel"),
+        })
+
+    return jsonify({"transactions": transactions}), 200
