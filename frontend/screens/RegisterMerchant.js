@@ -94,9 +94,12 @@ const RegisterMerchant = ({ navigation }) => {
         setMerchantExtId(data.ext_id);
         saveExtId(data.ext_id); 
         setResponseModal(true);
+  
+        // Save merchant data to AsyncStorage
+        await AsyncStorage.setItem('merchantData', JSON.stringify(data));
+  
       } else {
         if (data.error === 'User is already a merchant') {
-          // Navigate to the dashboard if the user is already a merchant
           navigation.navigate('Dashboard');
         } else {
           alert(data.error);
@@ -107,6 +110,7 @@ const RegisterMerchant = ({ navigation }) => {
       alert('Registration Failed');
     }
   };
+  
   
   // Handle step changes
   const nextStep = () => setCurrentStep((prevStep) => Math.min(prevStep + 1, 5));
@@ -133,7 +137,20 @@ const RegisterMerchant = ({ navigation }) => {
           </Picker>
           <TextInput style={styles.input} placeholder="Registration Number" value={registrationNumber} onChangeText={setRegistrationNumber} />
           <TextInput style={styles.input} placeholder="VAT Number" value={vatNumber} onChangeText={setVatNumber} />
-          <TextInput style={styles.input} placeholder="Category Code" value={categoryCode} onChangeText={setCategoryCode} />
+          <Picker
+        selectedValue={categoryCode}
+        onValueChange={(itemValue) => setCategoryCode(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Retail (5311)" value="5311" />
+        <Picker.Item label="Restaurants (5812)" value="5812" />
+        <Picker.Item label="Hotels (7011)" value="7011" />
+        <Picker.Item label="Grocery Stores (5411)" value="5411" />
+        <Picker.Item label="Automotive (7538)" value="7538" />
+        <Picker.Item label="Health Services (8011)" value="8011" />
+        <Picker.Item label="Entertainment (7999)" value="7999" />
+        <Picker.Item label="Education (8220)" value="8220" />
+      </Picker>
         </View>
       )}
 
@@ -142,7 +159,21 @@ const RegisterMerchant = ({ navigation }) => {
         <View>
           <Text style={styles.sectionTitle}>Address</Text>
           <TextInput style={styles.input} placeholder="City" value={city} onChangeText={setCity} />
-          <TextInput style={styles.input} placeholder="Country" value={country} onChangeText={setCountry} />
+          <Picker
+        selectedValue={country}
+        onValueChange={(itemValue) => setCountry(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Nigeria (NG)" value="NG" />
+        <Picker.Item label="United States (US)" value="US" />
+        <Picker.Item label="United Kingdom (UK)" value="UK" />
+        <Picker.Item label="Canada (CA)" value="CA" />
+        <Picker.Item label="Germany (DE)" value="DE" />
+        <Picker.Item label="France (FR)" value="FR" />
+        <Picker.Item label="South Africa (ZA)" value="ZA" />
+        <Picker.Item label="India (IN)" value="IN" />
+        <Picker.Item label="China (CN)" value="CN" />
+      </Picker>
           <TextInput style={styles.input} placeholder="ZIP Code" value={zip} onChangeText={setZip} />
           <TextInput style={styles.input} placeholder="Address Line" value={addressLine} onChangeText={setAddressLine} />
         </View>
@@ -211,9 +242,8 @@ const RegisterMerchant = ({ navigation }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Registration Successful</Text>
-            <Text>Your Merchant ID: {merchantExtId}</Text>
             <TouchableOpacity style={styles.button} onPress={() => setResponseModal(false)}>
-              <Text style={styles.buttonText}>Close</Text>
+              <Text style={styles.buttonText} onPress={() => navigation.navigate("Dashboard")}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>

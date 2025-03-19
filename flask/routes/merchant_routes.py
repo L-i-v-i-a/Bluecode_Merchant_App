@@ -583,7 +583,8 @@ def create_bluescan_app():
         "bluescan_app": {
             "name": bluescan_app_data["name"],
             "type": bluescan_app_data.get("type", "admin"),
-            "sdk_host": bluescan_app_data.get("sdk_host", "BLUECODE")
+            "sdk_host": bluescan_app_data.get("sdk_host", "BLUECODE"),
+            "currency":bluescan_app_data.get("currency","EUR")
         }
     }
 

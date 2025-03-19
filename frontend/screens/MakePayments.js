@@ -1,21 +1,39 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Alert, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
 
-const PaymentPage = () => {
+const PaymentPage = ({ navigation }) => {
   const [barcode, setBarcode] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [requestedAmount, setRequestedAmount] = useState('');
   const [currency, setCurrency] = useState('NGN');
+  const [merchantExtId, setMerchantExtId] = useState(null);
+  const [branchExtId, setBranchExtId] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const fetchStorageData = async () => {
+      try {
+        const merchantId = await AsyncStorage.getItem('merchant_ext_id');
+        const branchId = await AsyncStorage.getItem('branch_ext_id');
+
+        console.log('Retrieved Merchant Ext ID:', merchantId);
+        console.log('Retrieved Branch Ext ID:', branchId);
+
+        setMerchantExtId(merchantId);
+        setBranchExtId(branchId);
+      } catch (error) {
+        console.error('Error retrieving merchant or branch ID:', error);
+      }
+    };
+
+    fetchStorageData();
+  }, []);
+
   const handlePayment = async () => {
-    // Show loading indicator
     setLoading(true);
   
     try {
-      // Get the token from AsyncStorage
       const token = await AsyncStorage.getItem('token');
       if (!token) {
         Alert.alert('Error', 'User not authenticated!');
@@ -23,17 +41,24 @@ const PaymentPage = () => {
         return;
       }
   
-      // Prepare payment data
+      if (!merchantExtId || !branchExtId) {
+        Alert.alert('Error', 'Merchant or Branch ID is missing!');
+        setLoading(false);
+        return;
+      }
+  
       const paymentData = {
-        barcode: barcode,
+        barcode,
         total_amount: totalAmount,
         requested_amount: requestedAmount,
-        currency: currency,
-        slip: '', // If you have a slip, you can pass it here
+        currency,
+        merchant_ext_id: merchantExtId,
+        branch_ext_id: branchExtId,
       };
   
-      // Send payment request to backend
-      const response = await fetch('http://192.168.0.119:4000/make-payment', {
+      console.log('📤 Sending Payment Data:', paymentData);
+  
+      const response = await fetch('http://192.168.0.119:4000/payment/make-payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,34 +67,49 @@ const PaymentPage = () => {
         body: JSON.stringify(paymentData),
       });
   
-      const responseData = await response.json();
+      const responseText = await response.text();
+      console.log('📩 Raw Response:', responseText);
   
-      if (response.ok) {
-        // Store transaction data in AsyncStorage
-        const { merchant_tx_id, status } = responseData;
-        await AsyncStorage.setItem('merchant_tx_id', merchant_tx_id);
-        await AsyncStorage.setItem('payment_status', status);
+      try {
+        const responseData = JSON.parse(responseText);
+        console.log('✅ Payment Response:', responseData);
   
-        // Show success message
-        Alert.alert('Payment Success', `Transaction ID: ${merchant_tx_id}\nStatus: ${status}`);
+        if (response.ok) {
+          const { merchant_tx_id, status, bluecode_response } = responseData;
   
-        // Reset form
-        setBarcode('');
-        setTotalAmount('');
-        setRequestedAmount('');
-        setCurrency('NGN');
-      } else {
-        // Handle errors
-        Alert.alert('Payment Failed', responseData.message || 'Something went wrong!');
+          // Store transaction details locally
+          await AsyncStorage.setItem('merchant_tx_id', merchant_tx_id);
+          await AsyncStorage.setItem('payment_status', status);
+          await AsyncStorage.setItem('bluecode_responses', JSON.stringify(bluecode_response));
+  
+          // Success alert
+          Alert.alert('✅ Payment Successful', `Transaction ID: ${merchant_tx_id}\nStatus: ${status}`);
+  
+          // Navigate to Payment screen with transaction details
+          navigation.navigate('Payment', { merchant_tx_id });
+  
+          // Reset input fields
+          setBarcode('');
+          setTotalAmount('');
+          setRequestedAmount('');
+          setCurrency('NGN');
+        } else {
+          Alert.alert('❌ Payment Failed', responseData.message || 'Something went wrong!');
+        }
+      } catch (error) {
+        console.error('❌ JSON Parse Error:', error, responseText);
+        Alert.alert('Error', 'Unexpected response from the server.');
       }
+  
     } catch (error) {
-      console.error(error);
+      console.error('❌ Payment Error:', error);
       Alert.alert('Error', 'An error occurred while processing your payment.');
     } finally {
       setLoading(false);
     }
   };
   
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Make Payment</Text>
@@ -102,9 +142,7 @@ const PaymentPage = () => {
         <Text style={styles.buttonText}>Make Payment</Text>
       </TouchableOpacity>
 
-      {loading && (
-        <ActivityIndicator size="large" color="#007AFF" style={styles.loadingIndicator} />
-      )}
+      {loading && <ActivityIndicator size="large" color="#007AFF" style={styles.loadingIndicator} />}
     </View>
   );
 };

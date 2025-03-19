@@ -50,7 +50,7 @@ const EditBranchScreen = ({ route, navigation }) => {
       const storedToken = await AsyncStorage.getItem('token');
       setToken(storedToken);
 
-      const response = await fetch(`http://192.168.0.119:4000/merchant/${merchantId}/branch/${branchId}`, {
+      const response = await fetch(`http://192.168.0.119:4000/merchant/merchants/${merchantId}/branch/${branchId}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${storedToken}` },
       });
@@ -70,11 +70,11 @@ const EditBranchScreen = ({ route, navigation }) => {
         setContactPhone(data.contact?.phone || '');
         setBookingPrefix(data.booking_reference_prefix || '');
       } else {
-        Alert.alert('Error', data.error || 'Failed to fetch branch details.');
+        Alert.alert('Error', data.error || 'update your branch details.');
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert('Network Error', 'Unable to fetch branch details.');
+      Alert.alert('Now update');
     }
   };
 

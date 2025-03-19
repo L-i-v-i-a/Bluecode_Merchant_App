@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome5 } from '@expo/vector-icons'; // ✅ Import Icons
+import { FontAwesome5 } from '@expo/vector-icons'; 
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
@@ -16,14 +16,8 @@ const DashboardScreen = () => {
         <Text style={styles.cardText}>Register Authorization</Text>
       </TouchableOpacity>
 
-      {/* Check Authorization Status */}
-      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AuthorizationStatus')}>
-        <FontAwesome5 name="search-dollar" size={24} color="#007AFF" style={styles.icon} />
-        <Text style={styles.cardText}>Check Authorization Status</Text>
-      </TouchableOpacity>
-
       {/* View Transaction Status */}
-      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('TransactionStatus')}>
+      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('TransactionsPage')}>
         <FontAwesome5 name="receipt" size={24} color="#007AFF" style={styles.icon} />
         <Text style={styles.cardText}>View Transaction Status</Text>
       </TouchableOpacity>
@@ -35,7 +29,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: '#F4F6F9', // Light grayish background
+    backgroundColor: '#F4F6F9', 
     alignItems: 'center',
   },
   title: {

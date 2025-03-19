@@ -1,0 +1,89 @@
+
+@payment_bp.route("/register", methods=["POST"])
+@jwt_required()
+def register_merchant():
+    user_id = get_jwt_identity()
+
+    merchant = get_merchant_details(user_id)
+    if not merchant:
+        return jsonify({"error": "Merchant details not found"}), 404
+    logging.info(f"Merchant Data Retrieved: {merchant}")
+
+
+    bluecode_access_key = merchant.get("bluecode_access_id", "")
+    bluecode_secret_key = merchant.get("bluecode_secret_key", "")
+    if not bluecode_access_key or not bluecode_secret_key:
+        logging.error("Bluecode credentials missing")
+        return jsonify({"error": "Bluecode credentials missing"}), 403
+
+
+    branch = get_branch_details(merchant["ext_id"])
+    if not branch:
+        return jsonify({"error": "Branch details not found"}), 404
+    logging.info(f"Branch Details Retrieved: {branch}")
+
+    transaction = get_latest_transaction(merchant["_id"])
+    if not transaction:
+        return jsonify({"error": "No transaction found for merchant"}), 404
+    logging.info(f"Latest Transaction Found: {transaction}")
+
+ 
+    payload = {
+        "branch_ext_id": branch["ext_id"],
+        "merchant_tx_id": transaction["merchant_tx_id"],
+        "requested_amount": transaction["total_amount"],
+        "currency": transaction["currency"],
+        "scheme": transaction["scheme"],
+        "merchant_callback_url": "https://www.merchant.com/transaction-callback",
+        "return_url_cancel": "https://www.merchant.com/cancel",
+        "return_url_failure": "https://www.merchant.com/failure",
+        "return_url_success": "https://www.bluecode.com",
+        "terminal": branch.get("terminal", "22140PH4"),
+        "source": "pos"
+    }
+
+    logging.info(f"Sending Registration Request: {json.dumps(payload, indent=4)}")
+
+    credentials = f"{bluecode_access_key}:{bluecode_secret_key}"
+    encoded_credentials = base64.b64encode(credentials.encode()).decode()
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic {encoded_credentials}"
+    }
+
+ 
+    response = requests.post(BLUECODE_REGISTER_URL, json=payload, headers=headers)
+    logging.info(f"📥 Bluecode Response: {response.status_code}, {response.text}")
+
+ 
+    if response.status_code != 201:
+        return jsonify({
+            "error": "Failed to register merchant with Bluecode",
+            "details": response.json()
+        }), response.status_code
+
+   
+    bluecode_response = response.json()
+    payload["ext_id"] = bluecode_response.get("merchant_ext_id")
+    payload["created_at"] = datetime.datetime.utcnow()
+    merchants.insert_one(payload)
+    registered_merchants.insert_one(payload)
+
+    return jsonify({
+        "message": "Merchant registered successfully",
+        "merchant_ext_id": payload["ext_id"]
+    }), 201
+
+
+@payment_bp.route("/transaction/<merchant_tx_id>", methods=["GET"])
+@jwt_required()  
+def get_transaction_by_merchant_tx_id(merchant_tx_id):
+   
+    transaction = transactions.find_one({"merchant_tx_id": merchant_tx_id})
+
+    if not transaction:
+        return jsonify({"error": "Transaction not found"}), 404
+
+    transaction['_id'] = str(transaction['_id'])
+

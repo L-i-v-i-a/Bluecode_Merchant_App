@@ -13,11 +13,13 @@ const CreateBluescanApp = () => {
   // Function to create BlueScan app
   const createBluescanApp = async () => {
     try {
-      const merchant_id = await AsyncStorage.getItem('merchant_id');
-      const ext_id = await AsyncStorage.getItem('ext_id');
-      const token = await AsyncStorage.getItem('auth_token');
-
-      if (!merchant_id || !ext_id || !token) {
+      const merchant_id = await AsyncStorage.getItem('merchant_ext_id');
+      const ext_id = await AsyncStorage.getItem('branch_ext_id');
+      const token = await AsyncStorage.getItem('token');
+      console.log("Retrieved merchant_id:", merchant_id);
+      console.log("Retrieved ext_id:", ext_id);
+      console.log("Retrieved token:", token);
+      if (!merchant_id || !ext_id ) {
         Alert.alert('Error', 'Required data missing. Please try again.');
         return;
       }
@@ -28,7 +30,8 @@ const CreateBluescanApp = () => {
         bluescan_app: {
           name: appName,
           type: appType,
-          sdk_host: sdkHost
+          sdk_host: sdkHost,
+          currency: "EUR"  // ✅ Add the currency (change as needed)
         }
       };
 
@@ -69,9 +72,9 @@ const CreateBluescanApp = () => {
           onValueChange={(itemValue) => setAppType(itemValue)}
           style={styles.picker}
         >
-          <Picker.Item label="Admin" value="admin" />
-          <Picker.Item label="User" value="user" />
-          <Picker.Item label="Merchant" value="merchant" />
+          <Picker.Item label="admin" value="admin" />
+          <Picker.Item label="user" value="user" />
+          <Picker.Item label="merchant" value="merchant" />
         </Picker>
       </View>
 

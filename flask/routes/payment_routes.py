@@ -62,130 +62,137 @@ def get_latest_transaction(merchant_id):
 
 
 def get_branch_ext_id(user_id):
-    """Retrieve branch_ext_id following user → merchant → branch mapping."""
-    try:
-        user_id_obj = ObjectId(user_id)  
-        user = users_collection.find_one({"_id": user_id_obj})
-        if not user:
-            logging.warning(f"⚠️ User not found: {user_id}")
-            return None, None
-
-       
-        merchant = merchants.find_one({"user_id": str(user_id_obj)})
-        if not merchant:
-            logging.warning(f"⚠️ Merchant not found for user_id: {user_id_obj}")
-            return None, None
-
-        merchant_ext_id = merchant.get("ext_id")  
-        if not merchant_ext_id:
-            logging.warning(f"⚠️ Merchant ext_id missing for user_id: {user_id_obj}")
-            return None, None
-
-     
-        branch = branches.find_one({"merchant_id": merchant_ext_id})
-        if not branch:
-            logging.warning(f"⚠️ Branch not found for merchant_ext_id: {merchant_ext_id}")
-            return None, None
-
-        branch_ext_id = branch.get("ext_id")  
-        logging.info(f"🏢 Branch Retrieved: ext_id={branch_ext_id}")
-        return merchant, branch_ext_id 
-    except Exception as e:
-        logging.error(f"❌ Error retrieving branch_ext_id: {e}", exc_info=True)
+    """
+    Retrieves the correct branch_ext_id for a given merchant user_id.
+    """
+    merchant = merchants.find_one({"user_id": user_id})
+    if not merchant:
         return None, None
 
-#
-def generate_merchant_tx_id():
-    return str(uuid.uuid4())   
+    merchant_ext_id = merchant.get("ext_id")
+    
+    branch = branches.find_one({"merchant_id": merchant_ext_id})  
 
+    if not branch:
+        return merchant, None
+
+    return merchant, branch["ext_id"]
 
 @payment_bp.route("/make-payment", methods=["POST"])
 @jwt_required()
 def process_payment():
+    """
+    Processes a payment using the Bluecode API.
+    """
     data = request.json
-    logging.info(f"Received Payment Request: {data}")
+    logging.info(f"📥 Received Payment Request: {data}")
 
+    # Get authenticated user ID from JWT
     user_id = get_jwt_identity()
 
+    # Retrieve merchant and branch information
     merchant, branch_ext_id = get_branch_ext_id(user_id)
-    if not merchant or not branch_ext_id:
-        return jsonify({"error": "Merchant or branch not found"}), 404
+    if not merchant:
+        return jsonify({"error": "Merchant not found"}), 404
+    if not branch_ext_id:
+        return jsonify({"error": "Branch ID not found"}), 404
 
-    logging.info(f" Merchant Found: {merchant}")
-    logging.info(f" Branch ext_id: {branch_ext_id}")
+    logging.info(f"✅ Merchant Found: {merchant}")
+    logging.info(f"✅ Branch ext_id: {branch_ext_id}")
 
-  
-    bluecode_access_key = merchant.get("bluecode_access_id", "")
-    bluecode_secret_key = merchant.get("bluecode_secret_key", "")
+    # Fetch Bluecode credentials from merchant record
+    bluecode_access_key = merchant.get("bluecode_access_id")
+    bluecode_secret_key = merchant.get("bluecode_secret_key")
 
     if not bluecode_access_key or not bluecode_secret_key:
         return jsonify({"error": "Bluecode credentials missing for this merchant"}), 403
 
-  
+    # Validate required input fields
     barcode = data.get("barcode")
     if not barcode:
         return jsonify({"error": "Barcode is required"}), 400
 
+    total_amount = data.get("total_amount")
+    requested_amount = data.get("requested_amount")
+
+    if total_amount is None or requested_amount is None:
+        return jsonify({"error": "Total amount and requested amount are required"}), 400
+
+    # Generate a unique merchant transaction ID
     merchant_tx_id = generate_merchant_tx_id()
 
-    
+    # Prepare the payment request payload
     payload = {
         "branch_ext_id": branch_ext_id,
-        "merchant_tx_id": merchant_tx_id,  
+        "merchant_tx_id": merchant_tx_id,
         "scheme": data.get("scheme", "AUTO"),
         "barcode": barcode,
-        "total_amount": data.get("total_amount"),
-        "requested_amount": data.get("requested_amount"),
+        "total_amount": total_amount,
+        "requested_amount": requested_amount,
         "consumer_tip_amount": data.get("consumer_tip_amount", 0),
         "currency": data.get("currency", "NGN"),
         "slip": data.get("slip")
     }
-    logging.info(f"Sending Payment Request to Bluecode: {payload}")
+    logging.info(f"📤 Sending Payment Request to Bluecode: {payload}")
 
-  
+    # Encode credentials for Basic Authentication
     credentials = f"{bluecode_access_key}:{bluecode_secret_key}"
     encoded_credentials = base64.b64encode(credentials.encode()).decode()
-    
+
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Basic {encoded_credentials}"
     }
 
-    
-    response = requests.post(BLUECODE_API_URL, json=payload, headers=headers)
-    logging.info(f"Bluecode Response: {response.status_code}, {response.text}")
+    # Make request to Bluecode API
+    try:
+        response = requests.post(BLUECODE_API_URL, json=payload, headers=headers)
+        logging.info(f"📩 Bluecode Response: {response.status_code}, {response.text}")
+    except requests.RequestException as e:
+        logging.error(f"❌ Bluecode API Request Failed: {e}")
+        return jsonify({"error": "Failed to communicate with Bluecode API"}), 500
 
+    # Parse Bluecode API response
+    try:
+        bluecode_response = response.json()
+    except ValueError:
+        return jsonify({"error": "Invalid Bluecode response"}), 500
 
-    bluecode_response = response.json()
-    payment_state = bluecode_response.get("payment", {}).get("state")
-    bluecode_tx_id = bluecode_response.get("payment", {}).get("merchant_tx_id", merchant_tx_id)  # Use Bluecode ID or fallback
+    # Extract payment state and transaction ID
+    payment_info = bluecode_response.get("payment", {})
+    payment_state = payment_info.get("state")
+    bluecode_tx_id = payment_info.get("merchant_tx_id", merchant_tx_id)  
 
-    logging.info(f"Final merchant_tx_id used: {bluecode_tx_id}")
+    logging.info(f"✅ Final merchant_tx_id used: {bluecode_tx_id}")
+    logging.info(f"✅ Payment state: {payment_state}")
 
-    
+    # Save transaction details in MongoDB
     transaction_data = {
+        "user_id":user_id,
         "merchant_tx_id": bluecode_tx_id,
         "merchant_id": merchant["_id"],
         "scheme": payload["scheme"],
         "barcode": barcode,
-        "total_amount": payload["total_amount"],
-        "requested_amount": payload["requested_amount"],
+        "total_amount": total_amount,
+        "requested_amount": requested_amount,
         "consumer_tip_amount": payload["consumer_tip_amount"],
         "currency": payload["currency"],
         "slip": payload["slip"],
         "status": payment_state,
         "bluecode_response": bluecode_response,
-        "created_at": datetime.datetime.utcnow()
+        "created_at": datetime.datetime.utcnow().isoformat()
     }
 
-    transactions.insert_one(transaction_data)  
+    transactions.insert_one(transaction_data)
     logging.info(f"✅ Transaction Saved: {transaction_data}")
 
+    # Return response with full Bluecode response
     return jsonify({
         "merchant_tx_id": bluecode_tx_id,
         "barcode": barcode,
         "status": payment_state,
-        "message": merchant["transaction_settings"].get("booking_reference_prefix", "Payment successful")
+        "message": merchant.get("transaction_settings", {}).get("booking_reference_prefix", "Payment successful"),
+        "bluecode_response": bluecode_response  # ✅ Ensuring Bluecode response is included
     }), 200
 
 
@@ -198,25 +205,27 @@ def check_payment_status():
     if not merchant_tx_id:
         return jsonify({"error": "merchant_tx_id is required"}), 400
 
-    
+    # Get the authenticated user
     user_id = get_jwt_identity()
     user = users_collection.find_one({"_id": ObjectId(user_id)})
     if not user:
         return jsonify({"error": "User not found"}), 404
     logging.info(f"✅ User Found: {user}")
 
-  
-    merchant = merchants.find_one({"user_id": str(user_id)})  
+    # Get the merchant associated with the user
+    merchant = merchants.find_one({"user_id": str(user_id)})
     if not merchant:
         return jsonify({"error": "Merchant not found"}), 404
     merchant_id = merchant["_id"]
     logging.info(f"🔍 Merchant Found: {merchant}")
 
+    # Find the transaction in the database
     transaction = transactions.find_one({"merchant_tx_id": merchant_tx_id, "merchant_id": merchant_id})
     if not transaction:
         return jsonify({"error": "Transaction not found"}), 404
     logging.info(f"✅ Transaction Found: {transaction}")
 
+    # Prepare authorization header
     credentials = f"{merchant['bluecode_access_id']}:{merchant['bluecode_secret_key']}"
     encoded_credentials = base64.b64encode(credentials.encode()).decode()
 
@@ -225,17 +234,21 @@ def check_payment_status():
         "Authorization": f"Basic {encoded_credentials}"
     }
 
-
-    status_url = f"https://merchant-api.acq.int.bluecode.ng/v4/status/?merchant_tx_id={merchant_tx_id}"
+    # Send request to Bluecode
+    status_url = f"{BLUECODE_STATUS_API_URL}?merchant_tx_id={merchant_tx_id}"
     logging.info(f"📤 Sending Status Request to Bluecode: {status_url}")
 
-    response = requests.post(status_url, headers=headers)
-    logging.info(f"📥 Bluecode Response: {response.status_code}, {response.text}")
+    try:
+        response = requests.get(status_url, headers=headers, timeout=10)
+        response_data = response.json()
+        logging.info(f"📥 Bluecode Response: {response.status_code}, {response_data}")
 
-  
-    if response.status_code == 200:
-        return jsonify(response.json()), 200
+        if response.status_code == 200:
+            return jsonify(response_data), 200
+    except requests.exceptions.RequestException as e:
+        logging.error(f"❌ Bluecode Request Failed: {str(e)}")
 
+    # If Bluecode fails, return status from the database
     logging.info("❌ Bluecode transaction not found, returning database status")
     return jsonify({
         "message": "Transaction status retrieved from database",
@@ -246,7 +259,7 @@ def check_payment_status():
         "currency": transaction["currency"],
         "created_at": transaction["created_at"]
     }), 200
-
+    
 @payment_bp.route("/cancel", methods=["POST"])
 @jwt_required()
 def cancel_payment():
@@ -286,10 +299,10 @@ def cancel_payment():
     }
 
     cancel_url = f"https://merchant-api.acq.int.bluecode.ng/v4/cancel"
-    logging.info(f"Sending Cancel Request to Bluecode: {cancel_payload}")
+    logging.info(f"📤 Sending Cancel Request to Bluecode: {cancel_payload}")
 
     response = requests.post(cancel_url, json=cancel_payload, headers=headers)
-    logging.info(f"Bluecode Cancel Response: {response.status_code}, {response.text}")
+    logging.info(f"📥 Bluecode Cancel Response: {response.status_code}, {response.text}")
 
     if response.status_code == 200:
         transactions.update_one(
@@ -299,7 +312,7 @@ def cancel_payment():
         return jsonify({"message": "Payment cancelled successfully", "merchant_tx_id": merchant_tx_id, "status": "CANCELLED"}), 200
 
   
-    logging.info("Bluecode cancel request failed, returning database status")
+    logging.info("❌ Bluecode cancel request failed, returning database status")
     return jsonify({
         "message": "Failed to cancel on Bluecode, returning database status",
         "merchant_tx_id": transaction["merchant_tx_id"],
@@ -309,6 +322,9 @@ def cancel_payment():
         "currency": transaction["currency"],
         "created_at": transaction["created_at"]
     }), response.status_code
+
+
+import json
 
 @payment_bp.route("/register", methods=["POST"])
 @jwt_required()
@@ -363,18 +379,18 @@ def register_merchant():
         "Authorization": f"Basic {encoded_credentials}"
     }
 
- 
+    # 🔗 Send Request to Bluecode API
     response = requests.post(BLUECODE_REGISTER_URL, json=payload, headers=headers)
     logging.info(f"📥 Bluecode Response: {response.status_code}, {response.text}")
 
- 
+    # ❌ Handle API Failure
     if response.status_code != 201:
         return jsonify({
             "error": "Failed to register merchant with Bluecode",
             "details": response.json()
         }), response.status_code
 
-   
+    # ✅ Save Merchant in Database
     bluecode_response = response.json()
     payload["ext_id"] = bluecode_response.get("merchant_ext_id")
     payload["created_at"] = datetime.datetime.utcnow()
@@ -388,13 +404,53 @@ def register_merchant():
 
 
 @payment_bp.route("/transaction/<merchant_tx_id>", methods=["GET"])
-@jwt_required()  
+@jwt_required()  # Protect the route with JWT authentication
 def get_transaction_by_merchant_tx_id(merchant_tx_id):
-   
+    # Fetch the transaction by merchant_tx_id
     transaction = transactions.find_one({"merchant_tx_id": merchant_tx_id})
 
     if not transaction:
         return jsonify({"error": "Transaction not found"}), 404
 
+    # Convert ObjectId to string
     transaction['_id'] = str(transaction['_id'])
 
+@payment_bp.route('/merchants/transactions', methods=['POST'])
+@jwt_required()
+def get_merchant_transactions():
+    try:
+        # Get user ID from JWT token
+        user_id = get_jwt_identity()
+
+        # Check if user exists
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Fetch all transactions related to this user
+        transactionMade = list(transactions.find({"user_id": str(user_id)}))  
+
+        if not transactionMade:
+            return jsonify({"message": "No transactions found"}), 404
+
+        # Format the transaction data for response
+        formatted_transactions = []
+        for tx in transactionMade:
+            bluecode_response = tx.get("bluecode_response", {}).get("payment", {})
+
+            formatted_transactions.append({
+                "username": user.get("username", "Unknown"),
+                "amount_paid": bluecode_response.get("total_amount", 0),
+                "requested_amount": bluecode_response.get("requested_amount", 0),
+                "currency": bluecode_response.get("currency", "NGN"),
+                "status": tx.get("status", "UNKNOWN"),
+                "merchant_tx_id": bluecode_response.get("merchant_tx_id", "N/A"),
+                "acquirer_tx_id": bluecode_response.get("acquirer_tx_id", "N/A"),
+                "slip_note": bluecode_response.get("slip_note", ""),
+                "created_at": tx.get("created_at", ""),
+            })
+
+        return jsonify(formatted_transactions), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

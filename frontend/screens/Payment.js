@@ -1,99 +1,67 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
-const ViewPayment = ({ route, navigation }) => {
-  const { merchantTxId } = route.params;
-  const [statusInfo, setStatusInfo] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Function to fetch transaction status from the backend
-  const fetchTransactionStatus = async (merchantTxId) => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://192.168.0.119:4000/payment/status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ merchant_tx_id: merchantTxId }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setStatusInfo(data);
-      } else {
-        Alert.alert('Error', data.message || 'Failed to fetch transaction status.');
-      }
-    } catch (error) {
-      console.error(error);
-      setError('An error occurred while fetching the transaction status.');
-    } finally {
-      setLoading(false);
-    }
-  };
+const ViewPayment = () => {
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
+  const time = new Date().toLocaleTimeString();
 
   useEffect(() => {
-    if (merchantTxId) {
-      fetchTransactionStatus(merchantTxId);
-    }
-  }, [merchantTxId]);
+    const fetchPaymentDetails = async () => {
+      try {
+        const storedResponse = await AsyncStorage.getItem('bluecode_responses');
+        if (storedResponse) {
+          setPaymentDetails(JSON.parse(storedResponse));
+        }
+      } catch (error) {
+        console.error('Error fetching payment details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPaymentDetails();
+  }, []);
 
   if (loading) {
-    return (
-      <View style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Fetching transaction details...</Text>
-      </View>
-    );
+    return <ActivityIndicator size="large" color="#007AFF" style={styles.loading} />;
   }
 
-  if (error) {
-    return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
+  if (!paymentDetails) {
+    return <Text style={styles.errorText}>No payment details found.</Text>;
   }
 
   return (
     <View style={styles.container}>
-      {statusInfo ? (
-        <View style={styles.card}>
-          <Text style={styles.title}>Transaction Details</Text>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Transaction ID:</Text>
-            <Text style={styles.value}>{statusInfo.merchant_tx_id}</Text>
-          </View>
+      <Text style={styles.title}>Payment Summary</Text>
+      
+      <View style={styles.card}>
+        <Text style={styles.label}>Status:</Text>
+        <Text style={[styles.value, paymentDetails.payment.state === 'APPROVED' ? styles.approved : styles.failed]}>
+          {paymentDetails.payment.state}
+        </Text>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Status:</Text>
-            <Text style={[styles.value, styles.status(statusInfo.status)]}>{statusInfo.status}</Text>
-          </View>
+        <Text style={styles.label}>Amount Paid:</Text>
+        <Text style={styles.value}>{paymentDetails.payment.total_amount} {'NGN' || paymentDetails.payment.currency }</Text>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Total Amount:</Text>
-            <Text style={styles.value}>{statusInfo.total_amount} {statusInfo.currency}</Text>
-          </View>
+        <Text style={styles.label}>Requested Amount:</Text>
+        <Text style={styles.value}>{paymentDetails.payment.requested_amount} {'NGN' || paymentDetails.payment.currency}</Text>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Requested Amount:</Text>
-            <Text style={styles.value}>{statusInfo.requested_amount} {statusInfo.currency}</Text>
-          </View>
+        <Text style={styles.label}>Transaction Time:</Text>
+        <Text style={styles.value}>{time}</Text>
+      </View>
 
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Created At:</Text>
-            <Text style={styles.value}>{statusInfo.created_at}</Text>
-          </View>
+      {/* Buttons */}
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Dashboard')}>
+        <Text style={styles.buttonText}>Back to Dashboard</Text>
+      </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
-            <Text style={styles.buttonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <Text style={styles.noDataText}>No transaction details available.</Text>
-      )}
+      <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={() => navigation.navigate('PaymentMade')}>
+        <Text style={styles.buttonText}>View All Payments</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -101,75 +69,62 @@ const ViewPayment = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#f4f4f4',
-  },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#555',
-  },
-  errorText: {
-    fontSize: 16,
-    color: 'red',
-    textAlign: 'center',
-  },
-  noDataText: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#555',
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
   },
   title: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#007AFF',
     textAlign: 'center',
     marginBottom: 20,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+  card: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    elevation: 3,
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#555',
+    marginTop: 10,
   },
   value: {
-    fontSize: 16,
-    color: '#555',
+    fontSize: 18,
+    color: '#333',
   },
-  status: (status) => ({
+  approved: {
+    color: 'green',
     fontWeight: 'bold',
-    color: status === 'Success' ? 'green' : status === 'Pending' ? 'orange' : 'red',
-  }),
+  },
+  failed: {
+    color: 'red',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    textAlign: 'center',
+    color: 'red',
+    fontSize: 16,
+  },
+  loading: {
+    marginTop: 20,
+  },
   button: {
     backgroundColor: '#007AFF',
-    paddingVertical: 12,
+    padding: 15,
     borderRadius: 8,
     marginTop: 20,
     alignItems: 'center',
   },
+  secondaryButton: {
+    backgroundColor: '#28A745',
+  },
   buttonText: {
-    fontSize: 16,
-    color: '#fff',
+    color: 'white',
+    fontSize: 18,
     fontWeight: 'bold',
   },
 });

@@ -28,6 +28,9 @@ import EditBlueScan from './screens/EditBlueScan';
 import VirtualCardScreen from "./screens/VirtualCards.js"
 import DepositScreen from './screens/Deposit';
 import WalletScreen from './screens/Wallet';
+import ViewPayment from './screens/Payment.js';
+import PaymentsMade from './screens/PaymentsMade.js';
+import BarcodeScanner from './screens/Scanner.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +38,8 @@ const App = () => {
   return (
     <NavigationContainer>
         <Stack.Navigator initialRouteName={"Splash"}>
+        <Stack.Screen name='PaymentMade' component={PaymentsMade} options={{ headerShown: false }} />
+        <Stack.Screen name='Payment' component={ViewPayment} options={{ headerShown: false }} />
         <Stack.Screen name="Deposit" component={DepositScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ViewBlueScan" component={BlueScan} options={{ headerShown: false }} />
         <Stack.Screen name="EditBluescan" component={EditBlueScan} options={{ headerShown: false }} />
@@ -42,7 +47,7 @@ const App = () => {
         <Stack.Screen name="CancelPayment" component={CancelPayments} options={{ headerShown: false }} />
         <Stack.Screen name="VirtualCards" component={VirtualCardScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Wallet" component={WalletScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="QrCode" component={QrCode} options={{ headerShown: false }} />
+        <Stack.Screen name="Scanner" component={BarcodeScanner} options={{ headerShown: false }} />
         <Stack.Screen name="MakePayments" component={PaymentPage} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome" component={Welcome} options={{ headerShown: false }} />
         <Stack.Screen name="Splash" component={Splash} options={{ headerShown: false }} />

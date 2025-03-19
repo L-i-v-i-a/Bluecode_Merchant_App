@@ -25,7 +25,7 @@ const Dashboard = () => {
         const storedToken = await AsyncStorage.getItem("token");
         const storedBranchId = await AsyncStorage.getItem("branch_ext_id");
         const storedbluescanId = await AsyncStorage.getItem("bluescan_id");
-        const storedPayments = await AsyncStorage.getItem("payments_enabled");
+        const storedPayments = await AsyncStorage.getItem("merchant_tx_id");
 
         if (!storedToken) {
           Alert.alert("Session Expired", "Please log in again.");
@@ -62,7 +62,7 @@ const Dashboard = () => {
       {/* Top Header with Scan Icon */}
       <View style={styles.header}>
         <Text style={styles.title}>Merchant Dashboard</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("ScanQR")}>
+        <TouchableOpacity onPress={() => navigation.navigate("Scanner")}>
           <Ionicons name="scan-outline" size={28} color="#007AFF" />
         </TouchableOpacity>
       </View>
@@ -124,35 +124,15 @@ const Dashboard = () => {
           <Ionicons name="card-outline" size={24} color="#007AFF" />
           <View>
             <Text style={styles.cardTitle}>
-              {paymentsEnabled ? "Payments" : "Enable Payments"}
+              {paymentsEnabled ? "Payments" : "Make Payments"}
             </Text>
             <Text style={styles.cardDescription}>
               {paymentsEnabled
-                ? "Accept & process payments"
-                : "Set up payments for your business"}
+                ? "Payments made"
+                : "Accept & process payments"}
             </Text>
           </View>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() =>
-            navigation.navigate(bluescanId ? "ViewBlueScan" : "BlueScan")
-          }
-        >
-          <Ionicons name="card-outline" size={24} color="#007AFF" />
-          <View>
-            <Text style={styles.cardTitle}>
-              {paymentsEnabled ? "BlueScan App" : "Create BlueScan App"}
-            </Text>
-            <Text style={styles.cardDescription}>
-              {paymentsEnabled
-                ? "Use the app to process transactions"
-                : "Set up your own bluescan app "}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
 
         <TouchableOpacity
           style={styles.card}
@@ -160,18 +140,18 @@ const Dashboard = () => {
         >
           <Ionicons name="checkmark-circle-outline" size={24} color="#007AFF" />
           <View>
-            <Text style={styles.cardTitle}>Authorize Payment</Text>
+            <Text style={styles.cardTitle}>Make Authorized Payment</Text>
             <Text style={styles.cardDescription}>Authorize your payments</Text>
           </View>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate("TransactionsPage")}
+          onPress={() => navigation.navigate("PaymentMade")}
         >
           <Ionicons name="document-text-outline" size={24} color="#007AFF" />
           <View>
-            <Text style={styles.cardTitle}>Authorized Transactions</Text>
+            <Text style={styles.cardTitle}>Payment Transactions</Text>
             <Text style={styles.cardDescription}>
               View the transactions that are authorized
             </Text>

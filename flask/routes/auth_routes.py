@@ -183,11 +183,23 @@ def login():
     user = db.users.find_one({"email": email})
     if not user or not check_password_hash(user["password"], password):
         return jsonify({"error": "Invalid email or password"}), 401
+
     if not user["verified"]:
         return jsonify({"error": "Please verify your email first."}), 403
-    
+
+    # Generate access token
     access_token = create_access_token(identity=str(user["_id"]), expires_delta=datetime.timedelta(days=1))
-    return jsonify({"token": access_token, "message": "Login successful"}), 200
+
+    user_details = {
+        "id": str(user["_id"]),
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "username": user.get("username"),
+        "is_merchant": user.get("is_merchant", False),  
+        "verified": user.get("verified", False),
+    }
+
+    return jsonify({"token": access_token, "user": user_details, "message": "Login successful"}), 200
 
 # 🔹 Update Profile
 @auth_bp.route("/update-profile", methods=["PUT"])

@@ -26,7 +26,7 @@ const EditMerchantScreen = ({ route, navigation }) => {
   const [contactPhone, setContactPhone] = useState('');
   const [contactGender, setContactGender] = useState('FEMALE');
 
-  // ✅ Retrieve `ext_id` from AsyncStorage if missing
+
   useEffect(() => {
     const fetchExtId = async () => {
       if (!ext_id) {
@@ -49,7 +49,7 @@ const EditMerchantScreen = ({ route, navigation }) => {
       setToken(storedToken);
 
       try {
-        const response = await fetch(`http://192.168.0.119:4000/merchants/${ext_id}`, {
+        const response = await fetch(`http://192.168.0.119:4000/merchant/merchants/${ext_id}`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${storedToken}` }
         });
@@ -74,7 +74,7 @@ const EditMerchantScreen = ({ route, navigation }) => {
 
         setLoading(false);
       } catch (error) {
-        console.error('❌ Fetch Error:', error);
+        console.error('now update');
         setLoading(false);
       }
     };
